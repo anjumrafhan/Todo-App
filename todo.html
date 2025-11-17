@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Todo App — Upgrades Demo</title>
+<title>Todo App — Upgrades Demo (Fixed)</title>
 <style>
   /* ----- Basic Reset ----- */
   * { box-sizing: border-box; margin:0; padding:0; font-family: Inter, system-ui, Arial, sans-serif; }
@@ -53,12 +53,15 @@
   .checkbox { width:18px; height:18px; border-radius:6px; border:2px solid #cfe3ff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
   .checkbox.checked { background: #0d6efd; border-color:#0d6efd; color:#fff; font-size:12px; }
   .task-title { font-weight:600; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .meta { font-size:12px; color:#6b7280; margin-top:4px; display:flex; gap:8px; align-items:center; }
-  .tag { background:#eef6ff; color:#0d6efd; padding:4px 8px; border-radius:999px; font-size:12px; display:inline-block; }
+  .meta { font-size:12px; color:#6b7280; margin-top:4px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .tag { 
+    background:#eef6ff; color:#0d6efd; padding:4px 8px; border-radius:999px; font-size:12px; display:inline-block; 
+    min-width:36px; text-align:center;
+  }
 
   /* ----- Buttons ----- */
   .actions { display:flex; gap:8px; align-items:center; }
-  .icon-btn { background:transparent; border:0; cursor:pointer; padding:6px; border-radius:8px; transition:background .12s; }
+  .icon-btn { background:transparent; border:0; cursor:pointer; padding:6px; border-radius:8px; transition:background .12s; font-size:16px; }
   .icon-btn:hover{ background: #f1f7ff; }
   .danger { color:#ef4444; }
 
@@ -77,7 +80,6 @@
   @keyframes fadeOut { from{opacity:1} to{opacity:0; transform:translateX(20px)} }
 
   /* ----- Dark mode override ----- */
-  .dark-mode body, .dark { }
   .dark .card { background:#0b1320; color:#e6eef8; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
   .dark header { background: linear-gradient(90deg,#062a56,#0b3f6b); color:#fff; }
   .dark .add { background:#07111b; box-shadow:none; }
@@ -88,6 +90,7 @@
   .dark .chip { background:#0a2a4a; color:#bfe0ff; }
   .dark .chip.active { background:#044b9b; color:#fff; }
   .dark .footer { background:#07121b; color:#8fbce8; }
+  .dark .tag { background:#08305d; color:#cfe8ff; }
 
   /* small helpers */
   .muted { color:#6b7280; font-size:13px; }
@@ -150,6 +153,7 @@
           <h4>Categories</h4>
           <div class="list" id="categoryChips">
             <button class="chip active" data-cat="All">All</button>
+            <button class="chip" data-cat="General">General</button>
             <button class="chip" data-cat="Work">Work</button>
             <button class="chip" data-cat="Home">Home</button>
             <button class="chip" data-cat="Business">Business</button>
@@ -204,25 +208,34 @@ function save(){ localStorage.setItem(LS_KEY, JSON.stringify(tasks)); }
 
 /* Helpers */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+/* Safer date formatter */
 function fmtDate(dStr){
   if(!dStr) return '';
-  const d = new Date(dStr + 'T00:00:00');
+  // Accept both yyyy-mm-dd and other formats
+  let d = new Date(dStr);
+  if (isNaN(d)) {
+    d = new Date(dStr + 'T00:00:00');
+  }
+  if (isNaN(d)) return dStr;
+  // Locale string (short)
   return d.toLocaleDateString();
 }
 
-/* Add */
+/* Add (fixed capture for category & date + debug log) */
 function addTask(){
   const text = taskInput.value.trim();
   if(!text) return alert('Please enter a task.');
 
-  // safe fetch of selected category (works even if browser behaves odd)
+  // safe fetch of selected category
   const category = (catSelect.options && catSelect.options[catSelect.selectedIndex])
                    ? catSelect.options[catSelect.selectedIndex].value
                    : (catSelect.value || 'General');
 
+  // safe due value (some browsers may return empty)
   const dueVal = dueInput.value || '';
 
-  console.log('Adding task →', { text, category, dueVal }); // check browser console (Cmd+Option+J on Mac)
+  console.log('Adding task →', { text, category, dueVal }); // open console to debug if needed
 
   const newTask = {
     id: uid(),
@@ -241,7 +254,7 @@ function addTask(){
 addBtn.addEventListener('click', addTask);
 taskInput.addEventListener('keydown', e => { if(e.key === 'Enter'){ addTask(); } });
 
-/* Render */
+/* Render (with safer meta creation) */
 function render(){
   // filters
   const activeFilter = document.querySelector('.chip[data-filter].active')?.dataset.filter || 'all';
@@ -277,7 +290,7 @@ function render(){
     return;
   }
 
-  list.forEach((t, idx) => {
+  list.forEach((t) => {
     const item = document.createElement('div');
     item.className = 'task';
     item.id = 'task-' + t.id;
@@ -296,10 +309,18 @@ function render(){
     if(t.done){ title.style.textDecoration = 'line-through'; title.style.opacity = '0.6'; }
     textWrap.appendChild(title);
 
-    const meta = document.createElement('div'); meta.className='meta';
-    const cat = document.createElement('span'); cat.className='tag'; cat.textContent = t.category;
+    // safer meta block
+    const meta = document.createElement('div'); meta.className = 'meta';
+    const cat = document.createElement('span'); cat.className = 'tag';
+    cat.textContent = t.category || 'General';
     meta.appendChild(cat);
-    if(t.due){ const due = document.createElement('span'); due.textContent = 'Due: ' + fmtDate(t.due); meta.appendChild(due); }
+
+    if (t.due && String(t.due).trim()) {
+      const due = document.createElement('span');
+      due.textContent = 'Due: ' + fmtDate(t.due);
+      due.style.marginLeft = '8px';
+      meta.appendChild(due);
+    }
     textWrap.appendChild(meta);
 
     left.appendChild(textWrap);
@@ -346,7 +367,7 @@ function deleteTask(id){
   }, 300);
 }
 
-/* Edit */
+/* Edit (prompt based) */
 function editTask(id){
   const t = tasks.find(x => x.id === id);
   if(!t) return;
