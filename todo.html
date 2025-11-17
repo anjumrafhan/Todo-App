@@ -214,11 +214,21 @@ function fmtDate(dStr){
 function addTask(){
   const text = taskInput.value.trim();
   if(!text) return alert('Please enter a task.');
+
+  // safe fetch of selected category (works even if browser behaves odd)
+  const category = (catSelect.options && catSelect.options[catSelect.selectedIndex])
+                   ? catSelect.options[catSelect.selectedIndex].value
+                   : (catSelect.value || 'General');
+
+  const dueVal = dueInput.value || '';
+
+  console.log('Adding task →', { text, category, dueVal }); // check browser console (Cmd+Option+J on Mac)
+
   const newTask = {
     id: uid(),
     text,
-    category: catSelect.value || 'General',
-    due: dueInput.value || '',
+    category: category || 'General',
+    due: dueVal,
     done: false,
     createdAt: Date.now()
   };
