@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", loadTasks);
 function addTask() {
     let input = document.getElementById("taskInput");
     let task = input.value.trim();
+    const taskDateTime = document.getElementById("taskDateTime").value;
 
     if (task === "") return alert("Please enter a task!");
 
