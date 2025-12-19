@@ -8,7 +8,12 @@ function addTask() {
     if (task === "") return alert("Please enter a task!");
 
     let tasks = getTasks();
-    tasks.push({ text: task, completed: false });
+    tasks.push({
+  text: taskText,
+  dateTime: taskDateTime,
+  reminded: false
+});
+
     saveTasks(tasks);
 
     input.value = "";
